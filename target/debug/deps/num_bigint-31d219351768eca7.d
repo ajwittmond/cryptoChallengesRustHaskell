@@ -1,0 +1,10 @@
+/home/alexanderwittmond/code/rust/cryptoChallenges/target/debug/deps/libnum_bigint-31d219351768eca7.rlib: /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/lib.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/macros.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/bigint.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/biguint.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/algorithms.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/monty.rs
+
+/home/alexanderwittmond/code/rust/cryptoChallenges/target/debug/deps/num_bigint-31d219351768eca7.d: /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/lib.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/macros.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/bigint.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/biguint.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/algorithms.rs /home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/monty.rs
+
+/home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/lib.rs:
+/home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/macros.rs:
+/home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/bigint.rs:
+/home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/biguint.rs:
+/home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/algorithms.rs:
+/home/alexanderwittmond/.cargo/registry/src/github.com-1ecc6299db9ec823/num-bigint-0.2.2/src/monty.rs:

@@ -1,0 +1,8 @@
+[package]
+name = "fixed_xor"
+version = "0.1.0"
+authors = ["Alexander Wittmond <awittmond@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+hex_to_base64 = { path = "/home/alexanderwittmond/code/rust/cryptoChallenges/hex_to_base64"}

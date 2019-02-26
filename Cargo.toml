@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+        "hex_to_base64",
+        "fixed_xor",
+        "single_byte_xor_cipher"
+]

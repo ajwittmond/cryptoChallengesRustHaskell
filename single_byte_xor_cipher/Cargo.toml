@@ -1,0 +1,10 @@
+[package]
+name = "single_byte_xor_cipher"
+version = "0.1.0"
+authors = ["Alexander Wittmond <awittmond@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+hex_to_base64 = {path="../hex_to_base64"}
+fixed_xor = {path="../fixed_xor"}
+num = "*"
