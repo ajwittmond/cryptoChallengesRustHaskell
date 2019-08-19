@@ -1,6 +1,4 @@
-use crate num;
 
-use num::Float;
 
 pub mod freq{
     //creates a byte histogram
@@ -23,10 +21,10 @@ pub mod freq{
          0.414675,0.13115,5.0475e-2,9.5475e-2,7.875e-3,
          9.6325e-2,3.2e-3];
 
-    pub fn lp_norm<I,J,K>(x:& I , y:& I, p: K) -> K
-    where I: IntoIterator<Item = K>,
-          K : Float
+    pub fn lp_norm<I,J,K>(x: I , y: I, p: K) -> K
+    where I : Iterator<Item = K>,
+          K : num::Float
     {
-        x.into_iter.zip(y.into_iter()).fold(|acc,(x,y)| acc + (x-y).powf(p),0).pow(1/p)
+        x.zip(y).fold(num::Zero::zero(),|acc : K,(x,y)| acc + (x-y).powf(p)).powf(p.recip())
     }
 }

@@ -18,22 +18,23 @@ import Data.List
 import qualified Data.Text as T
 import Control.Arrow
 import Data.List.Split
-import qualified Data.Map.Strict as M
+import qualified Data.IntMap.Strict as M
 import Data.Tuple
 import Data.Bool
 import Debug.Trace
+import Data.Foldable
 
-data Encoding = Enc Word32 (M.Map Int Char) (M.Map Char Int)
+data Encoding = Enc Word32 (M.IntMap Char) (M.IntMap Int)
 
 encodingFromList :: [(Int,Char)] -> Encoding
-encodingFromList lst = Enc (fromIntegral $ length lst) (M.fromList lst) (M.fromList $ map swap lst)
+encodingFromList lst = Enc (fromIntegral $ length lst) (M.fromList lst) (M.fromList $ map (first fromEnum . swap) lst)
 
 hex = encodingFromList $ zip [0..15] (['0'..'9']++['a'..'f'])
 base64 = encodingFromList $ zip [0..63] (['A'..'Z']++['a'..'z']++['0'..'9']++"+/")
 
 -- unsafe
 charToInt :: (Integral a) => Encoding -> Char -> a
-charToInt (Enc l to from) c = fromIntegral $ from M.! c
+charToInt (Enc l to from) c = fromIntegral $ from M.! (fromEnum c)
 
 --works by shifting so out of range bytes will be zero
 getByte :: (Integral a,Bits a) => a -> Int -> Word8
@@ -59,7 +60,7 @@ encodeBits (Enc l to _) a =
 decodeBits :: (Show a,Integral a, Bits a) => Encoding -> [Char] -> a
 decodeBits (Enc l _ from) s =
   let bits = getBits l
-  in foldl (.|.) 0 $ map (uncurry shiftL . first (fromIntegral . ( from M.! ))) $
+  in foldl (.|.) 0 $ map (uncurry shiftL . first (fromIntegral . ( from M.! ) . fromEnum)) $
                      zip (reverse s) [0,bits..]
 
 -- | Convert a hex string to bytes
@@ -91,3 +92,23 @@ toHex b = concatMap (\byte -> encodeBits hex byte)
 -- | xors the second string with the first one repeated to match the length of the second one
 blockXor :: B.ByteString -> B.ByteString -> B.ByteString
 blockXor block s = B.pack $ map (uncurry xor) $ zip (cycle $ B.unpack block) (B.unpack s)
+
+
+-- represents normalized frequency
+type Frequency = M.IntMap Double
+
+distance :: Frequency -> Frequency -> Frequency
+distance = M.unionWith (-)
+
+getFrequency :: (Enum a) => [a] -> Frequency
+getFrequency ls =
+  M.map ((/ (fromIntegral $ length ls)). fromIntegral) $
+  foldl' (\m c -> M.insertWith (+) (fromEnum c) 1 m) M.empty ls
+
+l2 :: (Foldable f, Floating a) => f a -> a
+l2 = sqrt . foldl' (\a b -> a + b^2) 0
+
+lp :: (Foldable f, Floating a) => a -> f a -> a
+lp p = (** (1/p)) . foldl' (\a b -> a + b**p) 0
+
+englishFrequency = error ""

@@ -10,6 +10,10 @@ name = "hex_to_base64"
 version = "0.1.0"
 
 [[package]]
+name = "hex_to_base64"
+version = "0.2.0"
+
+[[package]]
 name = "num"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -76,7 +80,7 @@ name = "single_byte_xor_cipher"
 version = "0.1.0"
 dependencies = [
  "fixed_xor 0.1.0",
- "hex_to_base64 0.1.0",
+ "hex_to_base64 0.2.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
