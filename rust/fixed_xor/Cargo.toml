@@ -5,4 +5,4 @@ authors = ["Alexander Wittmond <awittmond@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-hex_to_base64 = { path = "/home/alexanderwittmond/code/rust/cryptoChallenges/hex_to_base64"}
+hex_to_base64 = { path = "../hex_to_base64"}
