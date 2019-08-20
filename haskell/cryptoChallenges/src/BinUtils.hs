@@ -5,7 +5,13 @@ module BinUtils
  base64ToBytes,
  toBase64,
  toHex,
- blockXor
+ blockXor,
+ distance,
+ getFrequency,
+ l2,
+ lp,
+ Frequency(..),
+ loadFrequencyCSV
 
   )
 where
@@ -23,6 +29,8 @@ import Data.Tuple
 import Data.Bool
 import Debug.Trace
 import Data.Foldable
+import System.IO
+import Data.Char
 
 data Encoding = Enc Word32 (M.IntMap Char) (M.IntMap Int)
 
@@ -111,4 +119,8 @@ l2 = sqrt . foldl' (\a b -> a + b^2) 0
 lp :: (Foldable f, Floating a) => a -> f a -> a
 lp p = (** (1/p)) . foldl' (\a b -> a + b**p) 0
 
-englishFrequency = error ""
+loadFrequencyCSV :: FilePath -> IO Frequency
+loadFrequencyCSV path = do
+  f <- T.pack <$> readFile path
+  return $ M.fromList $ map (second ((/100.0).read) . first (fromEnum . toLower . head) .
+                             (\[a,b] -> (a,b)) .  drop 2 . map T.unpack . T.split (==',')) $ T.lines f
