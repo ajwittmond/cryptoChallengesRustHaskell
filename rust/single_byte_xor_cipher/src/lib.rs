@@ -25,6 +25,6 @@ pub mod freq{
     where I : Iterator<Item = K>,
           K : num::Float
     {
-        x.zip(y).fold(num::Zero::zero(),|acc : K,(x,y)| acc + (x-y).powf(p)).powf(p.recip())
+        x.zip(y).fold(num::Zero::zero(),|acc : K, (x,y)| acc + (x-y).powf(p)).powf(p.recip())
     }
 }

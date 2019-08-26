@@ -11,8 +11,12 @@ module BinUtils
  l2,
  lp,
  Frequency(..),
- loadFrequencyCSV
-
+ loadFrequencyCSV,
+ fl2,
+ flp,
+ zipFrequencies,
+ bestMatch,
+ toString
   )
 where
 
@@ -31,6 +35,7 @@ import Debug.Trace
 import Data.Foldable
 import System.IO
 import Data.Char
+import Debug.Trace
 
 data Encoding = Enc Word32 (M.IntMap Char) (M.IntMap Int)
 
@@ -113,14 +118,43 @@ getFrequency ls =
   M.map ((/ (fromIntegral $ length ls)). fromIntegral) $
   foldl' (\m c -> M.insertWith (+) (fromEnum c) 1 m) M.empty ls
 
-l2 :: (Foldable f, Floating a) => f a -> a
-l2 = sqrt . foldl' (\a b -> a + b^2) 0
+zipFrequencies :: Frequency -> Frequency -> [(Double,Double)]
+zipFrequencies a b =
+  let al = M.toList a
+      bl = M.toList b
+      doZip []          []          = []
+      doZip ((a,av):as) []          = (av,0):doZip as []
+      doZip []          ((b,bv):bs) = (0,bv):doZip bs []
+      doZip ((a,av):as) ((b,bv):bs)
+            | a==b = (av,bv):doZip as      bs
+            | a<b  = (av,0):doZip (as)   ((b,bv):bs)
+            | a>b  = (0,bv):doZip ((a,av):as) (bs)
+  in doZip al bl
 
-lp :: (Foldable f, Floating a) => a -> f a -> a
-lp p = (** (1/p)) . foldl' (\a b -> a + b**p) 0
+l2 :: (Foldable f, Floating a) => f (a,a) -> a
+l2 = sqrt . foldl' (\acc (a,b) -> acc + (a-b)^2) 0
+
+lp :: (Foldable f, Floating a) => a -> f (a,a) -> a
+lp p = (**( 1/p)) . foldl' (\acc (a,b) -> acc + (a-b)**p) 0
+
+fl2 :: Frequency -> Frequency -> Double
+fl2 a b = l2 $ zipFrequencies a b
+
+flp :: Double -> Frequency -> Frequency -> Double
+flp p a b = lp p $ zipFrequencies a b
 
 loadFrequencyCSV :: FilePath -> IO Frequency
 loadFrequencyCSV path = do
   f <- T.pack <$> readFile path
   return $ M.fromList $ map (second ((/100.0).read) . first (fromEnum . toLower . head) .
-                             (\[a,b] -> (a,b)) .  drop 2 . map T.unpack . T.split (==',')) $ T.lines f
+                             (\[a,b] -> (a,b)) . map T.unpack . T.split (==',')) $ T.lines f
+    
+bestMatch :: (Frequency -> Frequency -> Double) -> Frequency -> [B.ByteString] -> [[Char]] -> [(Double,[Char])]
+bestMatch norm freq tests strings = sort $ concatMap (\s -> map (\b ->
+                                                      let xored = map (toEnum . fromIntegral) $
+                                                                    B.unpack $ blockXor b (fromString s)
+                                                      in  (norm (getFrequency xored) freq,xored)
+                                                   ) tests) strings
+
+toString:: B.ByteString -> String
+toString = map (toEnum . fromIntegral) . B.unpack

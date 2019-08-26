@@ -32,8 +32,8 @@ library:
 
 executables:
   toBase64:
-    main:                ToBase64Main.hs
-    source-dirs:         app
+    main:                Main.hs
+    source-dirs:         ToBase64
     ghc-options:
     - -threaded
     - -rtsopts
@@ -41,9 +41,12 @@ executables:
     dependencies:
     - cryptoChallenges
     - text
+    - bytestring
+    - split
+    - containers
   SingleByteXor:
-    main: SingleByteXor.hs
-    source-dirs:         app
+    main: Main.hs
+    source-dirs:         SingleByteXor
     ghc-options:
     - -threaded
     - -rtsopts
@@ -51,6 +54,22 @@ executables:
     dependencies:
     - cryptoChallenges
     - text
+    - bytestring
+    - split
+    - containers
+  DetectSingleByteXor:
+    main: Main.hs
+    source-dirs:         DetectSingleByteXor
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - cryptoChallenges
+    - text
+    - bytestring
+    - split
+    - containers
 
 tests:
   cryptoChallenges-test:
