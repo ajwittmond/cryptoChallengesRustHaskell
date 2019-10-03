@@ -2,7 +2,7 @@ module Main where
 
 
 import System.Environment
-import BinUtils
+import Break.Utils
 
 main :: IO ()
 main = do

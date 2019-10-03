@@ -29,6 +29,7 @@ library:
     - text
     - split
     - containers
+    - lens
 
 executables:
   toBase64:
@@ -70,6 +71,31 @@ executables:
     - bytestring
     - split
     - containers
+  RepeatingKeyXor:
+    main: Main.hs
+    source-dirs:         RepeatingKeyXor
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - cryptoChallenges
+    - bytestring
+  BreakRepeatingKeyXor:
+      main: Main.hs
+      source-dirs:         BreakRepeatingKeyXor
+      ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      dependencies:
+      - cryptoChallenges
+      - text
+      - bytestring
+      - split
+      - containers
+
+
 
 tests:
   cryptoChallenges-test:

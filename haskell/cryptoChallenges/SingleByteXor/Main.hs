@@ -1,6 +1,7 @@
 module Main where
 
-import BinUtils
+import Break.Utils
+import Break.Vigenere
 import Data.Word
 import qualified Data.IntMap as M
 import Data.List.Split
@@ -15,12 +16,12 @@ main :: IO ()
 main  = do
   englishLetterFrequency <- loadFrequencyCSV csvPath
   print "Enter string to test"
-  string <- map (toEnum . fromIntegral) . B.unpack . hexToBytes <$> getLine
-  let matches = bestMatch (fl2) englishLetterFrequency ( map (B.pack.pure) [0..255]) [string]
+  string <-  B.unpack . hexToBytes <$> getLine
+  let matches = bestMatch (fl2) englishLetterFrequency ( map pure [0..255]) [string]
   print "here is the best match"
   writeFile "/home/alexanderwittmond/code/cryptoChallengesRustHaskell/matchex.txt" $
-       unlines $ map snd matches
+       unlines $ map (toAscii . snd) matches
   -- mapM (print . snd) matches
-  print $ head $ filter (all (\c -> c >= ' ' && c <='~')) $ map snd $ matches
+  print $ head $ filter (all (\c -> c >= ' ' && c <='~')) $ map (toAscii.snd) $ matches
   return ()
   
