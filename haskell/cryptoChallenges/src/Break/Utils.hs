@@ -12,6 +12,7 @@ module Break.Utils
  hammingDist,
  fromAscii,
  isText,
+ isBase64
   )
 where
 
@@ -42,6 +43,8 @@ encodingFromList lst = Enc (fromIntegral $ length lst) (M.fromList lst) (M.fromL
 
 hex = encodingFromList $ zip [0..15] (['0'..'9']++['a'..'f'])
 base64 = encodingFromList $ zip [0..63] (['A'..'Z']++['a'..'z']++['0'..'9']++"+/")
+
+inEncoding (Enc _ _ from) c = M.member (fromEnum c) from
 
 -- unsafe
 charToInt :: (Integral a) => Encoding -> Char -> a
@@ -115,3 +118,6 @@ hammingDist :: [Word8] -> [Word8] -> Int
 hammingDist a b = foldl (\acc p ->acc + popCount (uncurry xor p)) 0 $ zip a b
 
 isText c = isPrint c || isSpace c
+
+isBase64 :: Char-> Bool
+isBase64 = inEncoding base64 

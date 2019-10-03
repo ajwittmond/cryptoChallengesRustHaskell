@@ -94,6 +94,22 @@ executables:
       - bytestring
       - split
       - containers
+  AESInECBMode:
+    main: Main.hs
+    source-dirs: AESInECBMode
+    dependencies:
+    - cryptonite
+    - bytestring
+    - containers
+    - cryptoChallenges
+  DetectAES:
+    main: Main.hs
+    source-dirs: DetectAESinECBMode
+    dependencies:
+    - bytestring
+    - cryptoChallenges
+    - containers
+    - split
 
 
 
