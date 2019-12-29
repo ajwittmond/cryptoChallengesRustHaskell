@@ -1,3 +1,4 @@
+s
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE ScopedTypeVariables#-}
@@ -81,8 +82,8 @@ decodeBits (Enc l _ from) s =
 
 -- | Convert a hex string to bytes
 hexToBytes :: String -> B.ByteString
-hexToBytes s = B.pack $
-  concatMap (\ls -> toBytes  $ ( decodeBits hex ls :: Word8)) (chunksOf 2 s)
+hexToBytes s = B.pack $ 
+  map (\ls ->  decodeBits hex ls :: Word8) (chunksOf 2 s)
 
 -- | Convert a base64 string to bytes filling in zeroes if the number of characters
 --   is not a multiple of three
