@@ -52,6 +52,10 @@ toAsciiTest = "Ascii Test" ~: TestList ["toAscii" ~: testString ~=? toAscii (B.u
 base64toBytesTest :: Test
 base64toBytesTest = "Base64 to bytes" ~:  testByteString ~=? base64ToBytes base64Result
 
+padTest :: Test
+padTest = "Pad test" ~: "YELLOW SUBMARINE\x04\x04\x04\x04" ~=?
+                         toAscii (pad 20 $ B.unpack $ fromString "YELLOW SUBMARINE" )
+
 binUtilsTest :: Test
 binUtilsTest = TestList [bytesToHexTest,
                          bytesToBase64Test,
@@ -59,4 +63,5 @@ binUtilsTest = TestList [bytesToHexTest,
                          hexToBase64Test,
                          repeatingKeyTest,
                          hammingDistanceTest,
-                         base64toBytesTest]
+                         base64toBytesTest,
+                         padTest]

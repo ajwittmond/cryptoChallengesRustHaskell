@@ -30,6 +30,8 @@ library:
     - split
     - containers
     - lens
+    - random
+    - cryptonite
 
 executables:
   toBase64:
@@ -110,6 +112,37 @@ executables:
     - cryptoChallenges
     - containers
     - split
+  PKCSPadding:
+    main: Main.hs
+    source-dirs: PKCSPadding
+    dependencies:
+      - bytestring
+      - cryptoChallenges
+  CbcMode:
+    main: Main.hs
+    source-dirs: CBCMode
+    dependencies:
+      - bytestring
+      - cryptoChallenges
+      - split
+      - cryptonite
+  EcbCbcOracle:
+    main: Main.hs
+    source-dirs: EcbCbcOracle
+    dependencies:
+      - random
+      - cryptoChallenges
+      - mtl
+  ByteAtATime:
+    main: Main.hs
+    source-dirs: ByteAtATime
+    dependencies:
+      - random
+      - cryptoChallenges
+      - mtl
+      - bytestring
+      - containers
+      - split
 
 
 

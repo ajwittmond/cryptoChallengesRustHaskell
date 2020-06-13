@@ -12,7 +12,8 @@ module Break.Utils
  hammingDist,
  fromAscii,
  isText,
- isBase64
+ isBase64,
+ pad
   )
 where
 
@@ -120,4 +121,10 @@ hammingDist a b = foldl (\acc p ->acc + popCount (uncurry xor p)) 0 $ zip a b
 isText c = isPrint c || isSpace c
 
 isBase64 :: Char-> Bool
-isBase64 = inEncoding base64 
+isBase64 = inEncoding base64
+
+pad :: Int -> [Word8] -> [Word8]
+pad blockSize lst =
+  lst ++ take remaining (cycle [4])
+  where  rem = blockSize - mod (length lst) blockSize 
+         remaining = if rem == blockSize then 0 else rem
