@@ -1,4 +1,3 @@
-s
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE BinaryLiterals #-}
 {-# LANGUAGE ScopedTypeVariables#-}
