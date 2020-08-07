@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+        "rust/hex_to_base64",
+        "rust/fixed_xor",
+        "rust/single_byte_xor_cipher",
+        "rust/crypto"
+]
