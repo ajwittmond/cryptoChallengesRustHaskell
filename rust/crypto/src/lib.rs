@@ -4,10 +4,6 @@ extern crate num;
 
 
 /// This module contains functions for encoding a decoding strings.
-/// It works primarily with Vecs of u8s but contains functions for decoding
-/// Vecs of chars to vecs of u8s.
-/// This implementation is naive and makes lots of unnecessary allocations
-/// TODO improve this by using iterators
 pub mod byte_utils {
     use std::iter::FromIterator;
     use std::iter::Iterator;
@@ -16,34 +12,46 @@ pub mod byte_utils {
     use std::ops::Shl;
     use std::ops::{Mul, BitOr, BitAnd};
     use std::mem::size_of;
-    use std::{cmp::max, convert::TryInto};
-
+    use std::convert::TryInto;
+    use num::Integer;
 
     /// This struct represents a way of encoding binary data as text.
     /// For example, it might represent base64 or hex.
     /// Two hashmaps are included for rapid encoding and decoding
     pub struct Encoding {
+        bits_per_char: u32,
         to: HashMap<u8,char>,
-        from: HashMap<char,u8>
+        from: HashMap<char,u8>,
+        padding: char,
+        lcm: u32
     }
 
     /// Consumes a list of key value pairs to generate an encoding
-    pub fn encoding_from_list(pair: Vec<(u8,char)>) -> Encoding {
-        Encoding {
-            to: HashMap::from_iter(pair.clone().into_iter()),
-            from: pair.clone().into_iter().map(|p| (p.1,p.0)).collect()
+    pub fn encoding_from_list(pair: Vec<(u8,char)>, padding: char) -> Encoding {
+        let bits_per_char = get_num_of_bits(pair.len() as u32);
+        let lcm = 8.lcm(&bits_per_char);
+        if lcm > 64{
+            panic!("invalid encoding size, lcm(8,bits_per_char) must be < 64")
+        }else{
+            Encoding {
+                bits_per_char,
+                to: HashMap::from_iter(pair.clone().into_iter()),
+                from: pair.clone().into_iter().map(|p| (p.1,p.0)).collect(),
+                padding,
+                lcm
+            }
         }
     }
 
     lazy_static! { pub static ref HEX: Encoding = encoding_from_list(
                             (0..=15).zip(('0'..='9').chain('a'..='f'))
-                            .collect());
+                            .collect(),'=');
     }
 
     lazy_static! { pub static ref B64: Encoding = encoding_from_list(
                             (0..=63).zip(('A'..='Z')
                             .chain('a'..='z').chain('0'..='9').chain(vec!['+','/']))
-                            .collect());
+                            .collect(),'=');
     }
 
     /// Tests if a char is a possible character value in the encoding.
@@ -77,61 +85,16 @@ pub mod byte_utils {
        }
     }
 
-    struct ToBytes<T> {
-        start: usize,
-        end:usize,
-        value: T
-    }
-
-    impl<T: Copy> ToBytes<T>{
-        fn new(val: &T) -> ToBytes<T> {
-            ToBytes{start: 0 , end: size_of::<T>(), value: *val}
-        }
-    }
-
-    impl<T> Iterator for ToBytes<T>
-    where T : TryInto<u8> + Shr<u32, Output = T> + Copy + BitAnd<Output = T> + From<u8>{
-        type Item = u8;
-
-        fn next(self : &mut ToBytes<T>) -> Option<u8>{
-            if self.start < self.end{
-                self.start += 1;
-                Some(get_byte(self.value,(self.start -1).try_into().unwrap()))
-            }else{
-                None
-            }
-        }
-    }
-
-    impl<T> DoubleEndedIterator for ToBytes<T>
-    where T : TryInto<u8> + Shr<u32, Output = T> + Copy + BitAnd<Output = T> + From<u8>{
-
-        fn next_back(self : &mut ToBytes<T>) -> Option<u8>{
-            if self.start < self.end{
-                self.end -= 1;
-                Some(get_byte(self.value,(self.end).try_into().unwrap()))
-            }else{
-                None
-            }
-        }
-
-    }
-
-    /// Transform an integral value into a vector of its constituent bytes
-    pub fn to_bytes<T>(val: & T) -> impl DoubleEndedIterator<Item = u8>
-    where T : TryInto<u8> + Shr<u32, Output = T> + Copy + BitAnd<Output = T> + From<u8>{
-        ToBytes::new(val)
-    }
 
     ///Takes list of bytes and returns them as a single number in a polymorphic way.
     ///from_bytes(vec![1,0]) = 512
-    pub fn from_bytes<I,T>(bytes: I) -> T
+    pub fn from_bytes<I,T>(bytes: I) -> (T,u32)
     where T: From<u8>,
           T: Shl<u8, Output = T>,
           T: Copy,
           T: BitOr<T, Output = T>,
           T: num::Zero,
-          I: Iterator<Item = u8>
+          I: IntoIterator<Item = u8>
     {
         let block_size : u8 = match size_of::<T>().try_into(){
             Ok(x) => x,
@@ -139,7 +102,7 @@ pub mod byte_utils {
         };
         (0u8..).step_by(8).zip(bytes)
             .map(|x| (T::from(x.1) << 8 * (block_size - 1) - x.0))
-            .fold(num::Zero::zero(), |acc, x| acc | x)
+            .fold((num::Zero::zero(), 0), |(acc,i), x| (acc | x , i + 1))
     }
 
     ///returns the number of bits needed to store the passed value
@@ -151,110 +114,210 @@ pub mod byte_utils {
     ///Converts some integral value to its representation in the passed encoding
     fn encode_block<T>(e: & 'static Encoding, block: T) -> impl Iterator<Item = char>
     where T: TryInto<u8>,
-          T: Into<u32>,
           T: Shl<u32, Output = T>,
           T: Shr<u32, Output = T>,
           T: Copy,
           <T as std::convert::TryInto<u8>>::Error : std::fmt::Debug
     {
-        let num_bits_in_encoding = get_num_of_bits(e.from.len() as u32) ;
         let bits_in_block = ( size_of::<T>()  * 8 ) as u32;
-        (0..bits_in_block)
-            .step_by(num_bits_in_encoding as usize)
+        (0..e.lcm)
+            .step_by(e.bits_per_char as usize)
             .zip(std::iter::repeat(block)).map(move |(i,block)|{
                 let mut bits_out = block <<   i;
-                bits_out = bits_out >> bits_in_block - (num_bits_in_encoding as u32);
+                bits_out = bits_out >> bits_in_block - (e.bits_per_char as u32);
                 e.to[&bits_out.try_into().expect("truncation error that should be impossible")]
         })
     }
 
     ///Takes a string and an encoding a puts the resulting bits into the desired integral value
-    fn decode_block<T>(encoding: &Encoding, encoded: &Vec<char>) -> T
+    fn decode_block<T,S>(encoding: &Encoding, encoded: S) -> (T,u32)
     where T: From<u8>,
           T: Shl<u32, Output = T>,
           T: Shr<u32, Output = T>,
           T: Copy,
           T: BitOr<T, Output = T>,
-          T: num::Zero
+          T: num::Zero,
+          S: Iterator<Item = char>
     {
-        let num_bits_in_encoding = get_num_of_bits(encoding.from.len() as u32);
-        let zeroes = (num_bits_in_encoding * encoded.len() as u32) % 8;
-        let mut bytes = encoded.iter().map(|c| encoding.from[&c]).rev();
+        let mut padding = 0;
+        let bytes = encoded.map(|c| {
+            if c == encoding.padding {
+                padding +=1;
+                0
+            } else {
+                encoding.from[&c]
+            }
+        });
         let mut out: T = num::Zero::zero();
-        let mut position = 0;
+        let mut read = 0;
         for b in bytes
         {
-            let x = T::from(b) << position;
-            position = position + num_bits_in_encoding;
-            out = out | x;
+            out = out << encoding.bits_per_char;
+            out = out | T::from(b);
+            read += 1;
         }
-        out >> zeroes
+        (out ,read - padding)
     }
 
-    /// Converts a hex encoded string to bytes
-    pub fn hex_to_bytes(s: &Vec<char>) -> Vec<u8>
+    ///An iterator that buffers bytes into an integral value
+    ///to encodes bytes into text in encodings that have uneven
+    ///bit sizes
+    pub struct Encoder<J> {
+        bytes_to_take: u32,
+        position: u32,
+        end: u32,
+        buffer: [char ; 64],
+        encoding : & 'static Encoding,
+        byte_iterator: J 
+    }
+
+    impl<J> Iterator for Encoder<J>
+    where J: Iterator<Item = u8>
     {
-        if s.len() % 2 != 0 {
-            panic!("not a valid hex string")
+        type Item = char;
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.position < self.end {
+                self.position += 1;
+                Some(self.buffer[( self.position - 1 ) as usize])
+            }else{
+                let (compacted,read) : (u64,u32) =
+                             from_bytes(self.byte_iterator
+                                            .by_ref()
+                                        .take(self.bytes_to_take as usize));
+                if read == 0 {
+                    None
+                }else{
+                    let mut i :u32 = 0;
+                    let bits = self.encoding.bits_per_char;
+                    for c in encode_block(self.encoding,compacted)
+                        .take(( ( read*8 + bits - 1 )/bits ) as usize)
+                    {
+                        self.buffer[i as usize] = c;
+                        i += 1;
+                    }
+                    let count = self.encoding.lcm/self.encoding.bits_per_char; //extra space
+                    while i < count {
+                        self.buffer[i as usize] = self.encoding.padding;
+                        i += 1;
+                    }
+                    self.position = 1;
+                    self.end = i;
+                    Some(self.buffer[0])
+                }
+            }
         }
-        s.chunks(2).map(|ls| decode_block(&HEX,&(ls.to_vec()))).collect()
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            let (min, max) = self.byte_iterator.size_hint();
+            let f = |x| (x*8 + self.encoding.bits_per_char as usize - 1)
+                / self.encoding.bits_per_char as usize;
+            (f(min), max.map(f))
+        }
     }
 
-    /// Converts a base64 encoded string to bytes
-    pub fn base64_to_bytes(s: &Vec<char>) -> Vec<u8>
-    {
-        let filtered : Vec<char> = s.iter().copied().filter(|x| *x != '=').collect();
-        filtered.chunks(4).flat_map(|ls|
-            {
-                let l = ls.len();
-                let drops = match l
-                {
-                    4 => 1,
-                    3 => 1,
-                    2 => 2,
-                    1 => 1,
-                    _ => panic!("Nani!")
-                };
-                let block: u32 = decode_block(&B64,&(ls.to_vec()));
-                to_bytes(&block).rev().skip(drops)
-            }).collect()
+    impl<J> ExactSizeIterator for Encoder<J>
+    where J: Iterator<Item = u8> + ExactSizeIterator{}
+
+    pub struct Decoder<J> {
+        chars_to_take: u32,
+        position: u32,
+        end: u32,
+        buffer: [u8 ; 8],
+        encoding : & 'static Encoding,
+        char_iterator: J 
     }
 
-    /// converts a string of bytes to base64
-    pub fn bytes_to_base64(b: &Vec<u8>) -> impl Iterator<Item = char> + '_
-    {
-        //Number of bytes given
-        let size: usize = b.len() * 4 / 3;
+    impl<J> Iterator for Decoder<J>
+    where J: Iterator<Item = char> {
+        type Item = u8;
 
-        // = chars added to the end of base64
-        let tail = if size % 4 != 0 { 4 - (size % 4) } else {0};
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.position < self.end {
+                self.position += 1;
+                Some(self.buffer[( self.position - 1 ) as usize])
+            } else {
+                let (bytes,chars_read) : (u64, u32) =
+                    decode_block(self.encoding,
+                                 self.char_iterator
+                                 .by_ref()
+                                 .take(self.chars_to_take as usize));
+                if chars_read == 0 {
+                    None
+                } else {
 
-        //Break bytes into chunks of three, i.e. one block, pad with zeros, and convert to u32
-        //Recall that each b64 is 6 bits, and each byte is 8 bits. lcm(6,8) = 24
-        b.chunks(3)
-         .map(|chungus| chungus
-                .into_iter()
-                .copied()
-                .chain(std::iter::repeat(0))
-                .take(4)
-        ).flat_map(
-             |chungus| encode_block(&B64,from_bytes::<_,u32>(chungus)).take(4)
-         ).chain(
-             std::iter::repeat('=').take(tail)
-         )
+                    let drop = 8 - (self.encoding.lcm)/ 8;
+                    let mut i = 0;
+                    let takes = chars_read * self.encoding.bits_per_char / 8;
+                    for c in bytes.to_be_bytes().iter()
+                        .skip(drop as usize)
+                        .take(takes as usize)
+                    {
+                        self.buffer[i] = *c;
+                        i+=1;
+                    }
+                    self.position = 1;
+                    self.end =  i  as u32;
+                    Some(self.buffer[0])
+                }
+            }
+        }
     }
 
-    /// converts a string of bytes to a hex encoded string
-    pub fn bytes_to_hex(b: &Vec<u8>) -> Vec<char>
+    pub trait Encodable{
+        type Iterator;
+
+        fn encode(self,encoding: & 'static Encoding) -> Encoder<Self::Iterator>;
+    }
+
+    impl<T,K> Encodable for T
+    where T : IntoIterator<IntoIter = K, Item = u8>,
+          K : Iterator<Item = u8>
     {
-        b.iter().copied().flat_map(|byte| encode_block(&HEX,byte)).collect()
+        type Iterator = K;
+        fn encode(self,encoding: & 'static Encoding) -> Encoder<Self::Iterator> {
+            Encoder{
+                bytes_to_take: 8.lcm(&encoding.bits_per_char)/8,
+                position: 0,
+                end: 0,
+                buffer: ['\0' ; 64],
+                encoding,
+                byte_iterator: self.into_iter()
+            }
+        }
+
+    }
+
+    pub trait Decodable{
+        type Iterator;
+
+        fn decode(self,encoding: & 'static Encoding) -> Decoder<Self::Iterator> ;
+    }
+
+    impl<T,K> Decodable for T
+    where T : IntoIterator<IntoIter = K, Item = char>,
+    K : Iterator<Item = char>
+    {
+        type Iterator = K;
+        fn decode(self,encoding: & 'static Encoding) -> Decoder<Self::Iterator> {
+            Decoder{
+                chars_to_take: 8.lcm(&encoding.bits_per_char)/encoding.bits_per_char,
+                position: 0,
+                end: 0,
+                buffer: [0,0,0,0,0,0,0,0],
+                encoding,
+                char_iterator: self.into_iter()
+            }
+        }
     }
 
     //Xors each byte. If lists are different lengths, it returns a list the length of the shortest list
-    pub fn block_xor(bytes1: &Vec<u8>, bytes2: &Vec<u8>) -> Vec<u8>
+    pub fn block_xor<'a,I,J>(bytes1: I, bytes2: J) -> impl Iterator<Item = u8> + 'a
+        where I : IntoIterator<Item = u8> + 'a,
+              J : IntoIterator<Item = u8> + 'a
     {
-        bytes1.iter().zip(bytes2.iter()).map(|(b1,b2)| b1 ^ b2).collect()
+        bytes1.into_iter().zip(bytes2.into_iter()).map(|(b1,b2)| b1 ^ b2)
     }
+
 
     /// returns the number of positive bits
     fn pop_count(n: u8) -> u8
@@ -269,9 +332,11 @@ pub mod byte_utils {
 
     /// calculates the hamming distance between two bytestrings
     /// truncating the longer string
-    pub fn hamming_distance(bytes1: &[u8], bytes2: &[u8]) -> usize
+    pub fn hamming_distance<'a,I,J>(bytes1: I, bytes2: J) -> usize
+    where I : IntoIterator<Item = u8> + 'a,
+          J : IntoIterator<Item = u8> + 'a
     {
-        bytes1.iter().zip(bytes2.iter())
+        bytes1.into_iter().zip(bytes2.into_iter())
             .fold(0, |acc, (b1,b2)| acc + pop_count(b1^b2)) as usize
     }
 
@@ -281,14 +346,17 @@ pub mod byte_utils {
         in_encoding(&B64, character)
     }
 
+    
+
 }
 
 #[cfg(test)]
 mod tests {
+    use super::byte_utils;
     use super::byte_utils::*;
 
 
-    const test_string : &str = "Man is distinguished, not only by his reason, but by this singular passion from other animals, which is a lust of the mind, that by a perseverance of delight in the continued and indefatigable generation of knowledge, exceeds the short vehemence of any carnal pleasure.";
+    const test_string : &[u8] = b"Man is distinguished, not only by his reason, but by this singular passion from other animals, which is a lust of the mind, that by a perseverance of delight in the continued and indefatigable generation of knowledge, exceeds the short vehemence of any carnal pleasure.";
 
     const base64_result : &str = "TWFuIGlzIGRpc3Rpbmd1aXNoZWQsIG5vdCBvbmx5IGJ5IGhpcyByZWFzb24sIGJ1dCBieSB0aGlzIHNpbmd1bGFyIHBhc3Npb24gZnJvbSBvdGhlciBhbmltYWxzLCB3aGljaCBpcyBhIGx1c3Qgb2YgdGhlIG1pbmQsIHRoYXQgYnkgYSBwZXJzZXZlcmFuY2Ugb2YgZGVsaWdodCBpbiB0aGUgY29udGludWVkIGFuZCBpbmRlZmF0aWdhYmxlIGdlbmVyYXRpb24gb2Yga25vd2xlZGdlLCBleGNlZWRzIHRoZSBzaG9ydCB2ZWhlbWVuY2Ugb2YgYW55IGNhcm5hbCBwbGVhc3VyZS4=";
 
@@ -298,13 +366,43 @@ mod tests {
 
     const base64 : &str = "SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t";
 
-    
     #[test]
-    fn hex_to_base_64(){
-        let bytes = hex_to_bytes(&hex.chars().collect());
-        assert!(2*bytes.len() == hex.len());
-        assert_eq!(*base64,bytes_to_base64(&bytes).into_iter().collect::<String>()[..]);
+    fn hex_to_bytes_test(){
+        let bytes : Vec<u8> = hex_result.chars().decode(&HEX).collect();
+        assert_eq!(test_string, &bytes[..]);
     }
 
+    #[test]
+    fn base64_to_bytes_test(){
+        let bytes : Vec<u8> = base64_result.chars().decode(&B64).collect();
+        assert_eq!(test_string, &bytes[..]);
+    }
+
+    #[test]
+    fn hex_to_base_64(){
+         assert_eq!(*base64,hex.chars().decode(&HEX).encode(&B64).collect::<String>()[..]);
+    }
+
+    #[test]
+    fn bytes_to_base64_test(){
+        assert_eq!(*base64_result,test_string.iter().copied().encode(&B64).collect::<String>()[..])
+    }
+
+    const repeatingKeyString : &str = "Burning 'em, if you ain't quick and nimble\nI go crazy when I hear a cymbal";
+    const repeatingKeyResult : &str = "0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165286326302e27282f";
+
+    #[test]
+    fn repeatingKeyTest(){
+        assert_eq!(*repeatingKeyResult,
+                   block_xor(
+                       repeatingKeyString.bytes(),
+                       "ICE".bytes().cycle()
+                   ).encode(&HEX).collect::<String>()[..]);
+    }
+
+    #[test]
+    fn hammingDistanceTest(){
+        assert_eq!(37, hamming_distance("this is a test".bytes(), "wokka wokka!!!".bytes()));
+    }
 
 }
