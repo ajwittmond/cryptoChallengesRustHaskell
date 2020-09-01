@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 lazy_static = "1.1"
 num = "*"
+vulkano = "0.19"
+winit = "0.22"
+rand = "*"
