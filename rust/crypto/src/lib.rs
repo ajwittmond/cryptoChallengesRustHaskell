@@ -6,5 +6,4 @@ extern crate num;
 
 
 
-mod vigenere;
-
+pub mod vigenere;

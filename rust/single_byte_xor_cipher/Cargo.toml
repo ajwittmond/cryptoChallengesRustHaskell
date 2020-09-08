@@ -5,6 +5,5 @@ authors = ["Alexander Wittmond <awittmond@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-hex_to_base64 = {path="../hex_to_base64"}
-fixed_xor = {path="../fixed_xor"}
+crypto = { path = "../crypto" } 
 num = "*"
